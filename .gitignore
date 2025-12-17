@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Node / Frontend
+node_modules/
+dist/
+.astro/
+frontend/dist/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Output (Optional: si quieres guardar el modelo, comenta estas líneas)
+# output/
+
+# Dataset (Optional: son >200MB, git los acepta pero es pesado. Descomenta para ignorar)
+# MHEALTHDATASET/

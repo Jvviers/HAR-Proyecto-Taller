@@ -1,0 +1,25 @@
+---
+// Componente para seleccionar sujeto
+---
+
+<div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+  <div class="flex flex-col md:flex-row md:items-center gap-4">
+    <div class="flex-1">
+      <label for="subject-select" class="block text-sm font-medium text-slate-400 mb-2">
+        Seleccionar Sujeto de Prueba
+      </label>
+      <select 
+        id="subject-select" 
+        class="w-full md:w-64 bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
+      >
+        <option value="">Seleccionar sujeto...</option>
+      </select>
+    </div>
+    <div class="flex items-center gap-4 text-sm text-slate-400">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">📊</span>
+        <span>GET /api/predict/{'{subject_id}'}</span>
+      </div>
+    </div>
+  </div>
+</div>

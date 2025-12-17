@@ -1,0 +1,590 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ActivityCard from '../components/ActivityCard.astro';
+import SubjectSelector from '../components/SubjectSelector.astro';
+---
+
+<Layout title="HAR - Reconocimiento de Actividades Humanas">
+  <main class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <!-- Header -->
+    <header class="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700">
+      <div class="container mx-auto px-4 py-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-white">
+              🏃 HAR Dashboard
+            </h1>
+            <p class="text-slate-400 mt-1">
+              Human Activity Recognition - Modelo ONNX
+            </p>
+          </div>
+          <div id="status-indicator" class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse" id="status-dot"></div>
+            <span class="text-slate-400 text-sm" id="status-text">Conectando...</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8">
+      <!-- Selector de Sujeto y Subida de Archivo -->
+      <section class="mb-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div>
+          <h2 class="text-xl font-semibold text-white mb-4">📂 Seleccionar Sujeto (Pre-cargado)</h2>
+          <SubjectSelector />
+        </div>
+        
+        <div>
+          <h2 class="text-xl font-semibold text-white mb-4">📤 Subir Archivo (Log/TXT)</h2>
+          <div class="bg-slate-800 rounded-xl p-6 border border-slate-700 flex flex-col gap-4">
+             <div class="relative">
+                <input type="file" id="file-upload" accept=".log,.txt,.csv" class="hidden" />
+                <label for="file-upload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-600 border-dashed rounded-lg cursor-pointer bg-slate-700/30 hover:bg-slate-700/50 transition-colors">
+                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg class="w-8 h-8 mb-4 text-slate-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                        </svg>
+                        <p class="mb-2 text-sm text-slate-400"><span class="font-semibold">Click para subir</span></p>
+                        <p class="text-xs text-slate-500">.log, .txt (Formato mHealth)</p>
+                    </div>
+                </label>
+             </div>
+             <div id="file-status" class="text-sm text-slate-400 text-center hidden"></div>
+             <button id="upload-btn" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+               Analizar Archivo
+             </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Métricas Generales -->
+      <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" id="metrics-section">
+        <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div class="text-slate-400 text-sm mb-2">Origen de Datos</div>
+          <div class="text-xl font-bold text-white truncate" id="selected-subject">-</div>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div class="text-slate-400 text-sm mb-2">Precisión</div>
+          <div class="text-3xl font-bold text-emerald-400" id="accuracy">--%</div>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div class="text-slate-400 text-sm mb-2">Total Ventanas</div>
+          <div class="text-3xl font-bold text-blue-400" id="total-windows">--</div>
+        </div>
+        <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div class="text-slate-400 text-sm mb-2">Duración Total</div>
+          <div class="text-3xl font-bold text-purple-400" id="total-duration">-- seg</div>
+        </div>
+      </section>
+
+      <!-- Resultados por Actividad -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold text-white mb-4">📊 Resultados por Actividad</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="activities-grid">
+          <div class="col-span-full text-center text-slate-500 py-12">
+            Selecciona un sujeto o sube un archivo para ver los resultados
+          </div>
+        </div>
+      </section>
+
+      <!-- Timeline de Actividades -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold text-white mb-4">📈 Timeline de Predicciones</h2>
+        <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <!-- Agregamos pb-8 para alejar la barra de scroll -->
+          <div id="timeline-container" class="overflow-x-auto pb-8 custom-scrollbar">
+            <div class="text-center text-slate-500 py-8">
+              Esperando datos...
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Matriz de Confusión -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold text-white mb-4">🎯 Matriz de Confusión</h2>
+        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <details class="group">
+            <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-700/50 transition-colors">
+               <span class="text-slate-200 font-medium">Ver Matriz</span>
+               <svg class="w-5 h-5 text-slate-400 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </summary>
+            <div class="p-6 border-t border-slate-700">
+                <div id="confusion-matrix" class="flex flex-col md:flex-row gap-8 items-start">
+                  <div class="text-center text-slate-500 py-8 w-full">
+                    Esperando datos...
+                  </div>
+                </div>
+            </div>
+          </details>
+        </div>
+      </section>
+
+      <!-- Predicción Manual -->
+      <section class="mb-8">
+        <h2 class="text-xl font-semibold text-white mb-4">🔬 Predicción Manual (JSON)</h2>
+        <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <details class="group">
+             <summary class="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-700/50 transition-colors">
+               <span class="text-slate-200 font-medium">Abrir Consola de Predicción</span>
+               <svg class="w-5 h-5 text-slate-400 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+             </summary>
+             <div class="p-6 border-t border-slate-700">
+                <div class="bg-slate-900/50 rounded-lg p-4 mb-6 border border-slate-600/50 text-sm text-slate-300">
+                  <h4 class="font-bold text-white mb-2 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    ¿Cómo funciona esta magia?
+                  </h4>
+                  <p class="mb-2">
+                    El modelo recibe <strong>189 números</strong> (Features) que resumen estadísticamente 2.5 segundos de movimiento.
+                  </p>
+                </div>
+
+                <p class="text-slate-400 mb-4 text-sm">
+                  Pega aquí abajo un JSON con el array de 189 características:
+                </p>
+                <div class="flex flex-col gap-4">
+                  <textarea 
+                    id="manual-input" 
+                    rows="4"
+                    class="w-full bg-slate-900 border border-slate-600 rounded-lg p-4 text-white font-mono text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder='{"sensor_data": [[...189 features...]]}'
+                  ></textarea>
+                  <div class="flex gap-4">
+                    <button 
+                      id="predict-btn"
+                      class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                    >
+                      🚀 Predecir
+                    </button>
+                    <button 
+                      id="example-btn"
+                      class="px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white font-medium rounded-lg transition-colors"
+                    >
+                      📋 Cargar Ejemplo
+                    </button>
+                  </div>
+                  <div id="prediction-result" class="hidden">
+                    <div class="bg-slate-900 rounded-lg p-4 mt-4">
+                      <div class="text-slate-400 text-sm mb-2">Resultado:</div>
+                      <div id="prediction-output" class="text-white font-mono"></div>
+                    </div>
+                  </div>
+                </div>
+             </div>
+          </details>
+        </div>
+      </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800/50 border-t border-slate-700 py-6 mt-auto">
+      <div class="container mx-auto px-4 text-center text-slate-500">
+        <p>HAR Dashboard - Proyecto Taller | Modelo Random Forest ONNX</p>
+      </div>
+    </footer>
+  </main>
+</Layout>
+
+<script>
+  const API_BASE = 'http://localhost:5000/api';
+  
+  const activityColors: Record<number, string> = {
+    1: '#22c55e', 2: '#3b82f6', 3: '#8b5cf6', 4: '#f59e0b',
+    5: '#ef4444', 6: '#06b6d4', 7: '#ec4899', 8: '#f97316',
+    9: '#84cc16', 10: '#14b8a6', 11: '#e11d48', 12: '#6366f1'
+  };
+
+  let activityNames: Record<number, string> = {};
+
+  async function loadActivityNames() {
+    try {
+      const res = await fetch(`${API_BASE}/activities`);
+      activityNames = await res.json();
+    } catch (e) {
+      console.error('Error cargando nombres de actividades:', e);
+    }
+  }
+
+  async function checkHealth() {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    
+    try {
+      const res = await fetch(`${API_BASE}/health`);
+      const data = await res.json();
+      
+      if (data.status === 'ok' && data.model_loaded) {
+        dot!.className = 'w-3 h-3 rounded-full bg-emerald-500';
+        text!.textContent = 'Conectado';
+        text!.className = 'text-emerald-400 text-sm';
+      } else {
+        dot!.className = 'w-3 h-3 rounded-full bg-yellow-500';
+        text!.textContent = 'Modelo no cargado';
+      }
+    } catch (e) {
+      dot!.className = 'w-3 h-3 rounded-full bg-red-500';
+      text!.textContent = 'Desconectado';
+      text!.className = 'text-red-400 text-sm';
+    }
+  }
+
+  async function loadSubjects() {
+    try {
+      const res = await fetch(`${API_BASE}/subjects`);
+      const data = await res.json();
+      const select = document.getElementById('subject-select') as HTMLSelectElement;
+      
+      if (select && data.subjects) {
+        select.innerHTML = '<option value="">Seleccionar sujeto...</option>';
+        data.subjects.forEach((id: number) => {
+          const opt = document.createElement('option');
+          opt.value = id.toString();
+          opt.textContent = `Sujeto ${id}`;
+          select.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.error('Error cargando sujetos:', e);
+    }
+  }
+
+  // --- RENDER FUNCTIONS ---
+  
+  function renderPredictionStats(data: any, titleOverride?: string) {
+      const grid = document.getElementById('activities-grid');
+      
+      // Update Metrics
+      document.getElementById('selected-subject')!.textContent = titleOverride || `#${data.subject_id}`;
+      document.getElementById('accuracy')!.textContent = `${data.accuracy}%`;
+      document.getElementById('total-windows')!.textContent = data.total_windows.toString();
+      document.getElementById('total-duration')!.textContent = `${(data.total_windows * data.step_duration_sec).toFixed(1)} seg`;
+      
+      // Render Grid
+      grid!.innerHTML = '';
+      data.activities.forEach((act: any) => {
+        const diff = act.predicted_duration_sec - act.real_duration_sec;
+        const diffClass = diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-red-400' : 'text-slate-400';
+        const diffSign = diff > 0 ? '+' : '';
+        
+        const card = document.createElement('div');
+        card.className = 'bg-slate-800 rounded-xl p-4 border border-slate-700 hover:border-slate-600 transition-colors';
+        card.innerHTML = `
+          <div class="flex items-start justify-between mb-3">
+            <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm" 
+                 style="background-color: ${activityColors[act.activity_id] || '#6b7280'}">
+              ${act.activity_id}
+            </div>
+            <span class="${diffClass} text-sm font-medium" title="${diff > 0 ? 'Sobreestimado: El modelo predijo más tiempo del real' : 'Subestimado: El modelo predijo menos tiempo del real'}">${diffSign}${diff.toFixed(1)}s</span>
+          </div>
+          <h3 class="text-white font-medium mb-2 text-sm leading-tight">${act.activity_name}</h3>
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Real:</span>
+              <span class="text-white" title="Duración (Cantidad de ventanas)">${act.real_duration_sec}s <span class="text-slate-500">(${act.real_windows} vent.)</span></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Predicho:</span>
+              <span class="text-white" title="Duración (Cantidad de ventanas)">${act.predicted_duration_sec}s <span class="text-slate-500">(${act.predicted_windows} vent.)</span></span>
+            </div>
+          </div>
+        `;
+        grid!.appendChild(card);
+      });
+  }
+
+  function renderTimeline(data: any) {
+    const container = document.getElementById('timeline-container');
+    const timelineWidth = Math.max(data.timeline.length * 3, 800);
+      
+    let html = `
+      <div class="mb-4">
+        <div class="text-sm text-slate-400 mb-2">Real</div>
+        <div class="flex h-8 rounded overflow-hidden" style="width: ${timelineWidth}px">
+    `;
+    
+    data.timeline.forEach((t: any) => {
+      html += `<div class="flex-shrink-0 w-[3px] h-full" 
+                   style="background-color: ${activityColors[t.real_activity] || '#6b7280'}"
+                   title="${t.real_name} (${t.start_time}s)"></div>`;
+    });
+    
+    html += `</div></div>
+      <div class="mb-4">
+        <div class="text-sm text-slate-400 mb-2">Predicho</div>
+        <div class="flex h-8 rounded overflow-hidden" style="width: ${timelineWidth}px">
+    `;
+    
+    data.timeline.forEach((t: any) => {
+      const isError = !t.correct;
+      // "Negrita" = Black fill + slightly larger
+      const errorClass = isError ? 'scale-y-125 z-10 shadow-sm' : '';
+      const color = isError ? '#000000' : (activityColors[t.predicted_activity] || '#6b7280');
+      
+      html += `<div class="flex-shrink-0 w-[3px] h-full ${errorClass} transition-all duration-200" 
+                   style="background-color: ${color}"
+                   title="[#${t.window}] ${t.predicted_name} (${t.start_time}s) ${isError ? '❌ ERROR' : '✅'}"></div>`;
+    });
+    
+    html += `</div></div>`;
+    
+    // Time Axis
+    html += `<div class="relative h-8 mt-2 border-t border-slate-700" style="width: ${timelineWidth}px">`;
+    
+    const totalDuration = data.total_duration_sec;
+    let interval = 10;
+    if (totalDuration > 300) interval = 30; 
+    if (totalDuration > 600) interval = 60;
+    
+    const numMarkers = Math.floor(totalDuration / interval) + 1;
+    
+    for(let i=0; i<numMarkers; i++) {
+       const time = i * interval;
+       const leftPos = (time / totalDuration) * 100;
+       
+       if(leftPos <= 100) {
+          html += `
+            <div class="absolute top-0 flex flex-col items-center" style="left: ${leftPos}%; transform: translateX(-50%)">
+              <div class="h-2 w-px bg-slate-500"></div>
+              <div class="text-[10px] text-slate-500 font-mono mt-1 whitespace-nowrap">${time}s</div>
+            </div>`;
+       }
+    }
+    html += `</div>`;
+
+
+    // Legend
+    html += `<div class="mt-8 flex flex-wrap gap-4 border-t border-slate-700 pt-4">`;
+    Object.entries(activityColors).forEach(([id, color]) => {
+      const name = activityNames[parseInt(id)] || `Activity ${id}`;
+      html += `<div class="flex items-center gap-2">
+        <div class="w-4 h-4 rounded shadow-sm" style="background-color: ${color}"></div>
+        <span class="text-xs text-slate-300">${name}</span>
+      </div>`;
+    });
+    html += `</div>`;
+    
+    container!.innerHTML = html;
+  }
+
+  function renderConfusionMatrix(data: any) {
+    const container = document.getElementById('confusion-matrix');
+    
+    let html = '<div class="overflow-x-auto"><table class="border-collapse">';
+    
+    // Header
+    html += '<thead><tr><th class="p-2 text-slate-400 text-xs">Real \\ Pred</th>';
+    data.label_ids.forEach((id: number) => {
+      html += `<th class="p-2 text-slate-300 text-xs font-bold w-12 text-center border-b border-slate-600" title="${activityNames[id]}">${id}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    
+    // Rows
+    const maxVal = Math.max(...data.matrix.flat());
+    
+    data.matrix.forEach((row: number[], i: number) => {
+      const rowId = data.label_ids[i];
+      html += `<tr>
+        <td class="p-2 text-slate-300 text-xs font-bold text-right pr-4 border-r border-slate-600" title="${activityNames[rowId]}">${rowId}</td>`;
+      
+      row.forEach((val: number, j: number) => {
+        const intensity = maxVal > 0 ? val / maxVal : 0;
+        const bgColor = i === j && val > 0
+          ? `rgba(34, 197, 94, ${0.2 + intensity * 0.6})` 
+          : (val > 0 ? `rgba(239, 68, 68, ${intensity * 0.6})` : 'transparent');
+          
+        const textColor = intensity > 0.5 ? 'white' : (val > 0 ? '#cbd5e1' : '#475569');
+        
+        html += `<td class="p-2 text-center text-xs w-12 h-10 border border-slate-700/50" 
+                     style="background-color: ${bgColor}; color: ${textColor}">
+                  ${val || ''}
+                </td>`;
+      });
+      
+      html += '</tr>';
+    });
+    
+    html += '</tbody></table></div>';
+    
+    // Side Legend
+    html += `<div class="min-w-[250px] bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
+        <h4 class="text-slate-400 text-xs uppercase font-bold mb-3 tracking-wider">Leyenda de Actividades</h4>
+        <div class="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">`;
+        
+    data.label_ids.forEach((id: number) => {
+        const name = activityNames[id] || `Unknown ${id}`;
+        html += `<div class="flex items-start gap-2 text-xs">
+            <span class="font-bold text-slate-300 w-6 flex-shrink-0 text-right">${id}:</span>
+            <span class="text-slate-400">${name}</span>
+        </div>`;
+    });
+    html += `</div></div>`;
+    
+    container!.innerHTML = html;
+  }
+
+  // --- LOGIC ---
+
+  async function loadPredictions(subjectId: number) {
+    const grid = document.getElementById('activities-grid');
+    grid!.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8">Cargando...</div>';
+    document.getElementById('timeline-container')!.innerHTML = '<div class="text-center text-slate-500 py-8">Cargando...</div>';
+    
+    try {
+      // Parallel fetch for speed
+      const [predRes, timeRes, matrixRes] = await Promise.all([
+          fetch(`${API_BASE}/predict/${subjectId}`),
+          fetch(`${API_BASE}/timeline/${subjectId}`),
+          fetch(`${API_BASE}/confusion-matrix/${subjectId}`)
+      ]);
+
+      const predData = await predRes.json();
+      const timeData = await timeRes.json();
+      const matrixData = await matrixRes.json();
+      
+      renderPredictionStats(predData);
+      renderTimeline(timeData);
+      renderConfusionMatrix(matrixData);
+      
+    } catch (e) {
+      console.error('Error cargando predicciones:', e);
+      grid!.innerHTML = '<div class="col-span-full text-center text-red-400 py-8">Error cargando datos</div>';
+    }
+  }
+
+  async function handleFileUpload() {
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    const file = fileInput.files?.[0];
+    const statusDiv = document.getElementById('file-status');
+    const uploadBtn = document.getElementById('upload-btn') as HTMLButtonElement;
+    
+    if (!file) return;
+
+    statusDiv!.textContent = 'Procesando archivo...';
+    statusDiv!.classList.remove('hidden', 'text-red-400');
+    statusDiv!.classList.add('text-blue-400');
+    uploadBtn.disabled = true;
+    
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE}/predict-file`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        statusDiv!.textContent = '✓ Archivo procesado correctamente. Ver resultados abajo.';
+        statusDiv!.classList.replace('text-blue-400', 'text-emerald-400');
+        
+        // Render all data
+        renderPredictionStats(data.prediction_stats, `Archivo: ${data.filename}`);
+        renderTimeline(data.timeline_data);
+        renderConfusionMatrix(data.matrix_data);
+        
+      } else {
+        throw new Error(data.error || 'Error al procesar archivo');
+      }
+      
+    } catch (e: any) {
+      console.error(e);
+      statusDiv!.textContent = `Error: ${e.message}`;
+      statusDiv!.classList.replace('text-blue-400', 'text-red-400');
+    } finally {
+        uploadBtn.disabled = false;
+    }
+  }
+
+  async function manualPredict() {
+     const input = document.getElementById('manual-input') as HTMLTextAreaElement;
+    const resultDiv = document.getElementById('prediction-result');
+    const outputDiv = document.getElementById('prediction-output');
+    
+    try {
+      const data = JSON.parse(input.value);
+      
+      const res = await fetch(`${API_BASE}/predict`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      const result = await res.json();
+      
+      resultDiv!.classList.remove('hidden');
+      
+      if (result.error) {
+        outputDiv!.innerHTML = `<span class="text-red-400">Error: ${result.error}</span>`;
+      } else {
+        let html = '<div class="space-y-2">';
+        result.predictions.forEach((p: any, i: number) => {
+          html += `<div class="flex items-center gap-3">
+            <div class="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
+                 style="background-color: ${activityColors[p.activity_id] || '#6b7280'}">
+              ${p.activity_id}
+            </div>
+            <span class="text-slate-300">${p.activity_name}</span>
+          </div>`;
+        });
+        html += '</div>';
+        outputDiv!.innerHTML = html;
+      }
+      
+    } catch (e) {
+      resultDiv!.classList.remove('hidden');
+      outputDiv!.innerHTML = `<span class="text-red-400">Error: JSON inválido</span>`;
+    }
+  }
+
+  function loadExample() {
+    const input = document.getElementById('manual-input') as HTMLTextAreaElement;
+    const exampleData = {
+      sensor_data: [Array(189).fill(0).map(() => Math.random() * 10 - 5)]
+    };
+    input.value = JSON.stringify(exampleData, null, 2);
+  }
+
+  // Event listeners
+  document.addEventListener('DOMContentLoaded', () => {
+    checkHealth();
+    loadSubjects();
+    loadActivityNames();
+    
+    // Selector de sujeto
+    document.getElementById('subject-select')?.addEventListener('change', (e) => {
+      const target = e.target as HTMLSelectElement;
+      if (target.value) {
+        loadPredictions(parseInt(target.value));
+      }
+    });
+
+    // File Upload
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    const statusDiv = document.getElementById('file-status');
+    const uploadBtn = document.getElementById('upload-btn') as HTMLButtonElement;
+    
+    fileInput?.addEventListener('change', (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+             statusDiv!.textContent = `Seleccionado: ${file.name}`;
+             statusDiv!.classList.remove('hidden', 'text-red-400', 'text-emerald-400');
+             statusDiv!.classList.add('text-slate-300');
+             statusDiv!.classList.remove('hidden');
+             uploadBtn.disabled = false;
+        } else {
+             uploadBtn.disabled = true;
+        }
+    });
+    
+    document.getElementById('upload-btn')?.addEventListener('click', handleFileUpload);
+    
+    // Botón predecir
+    document.getElementById('predict-btn')?.addEventListener('click', manualPredict);
+    
+    // Botón ejemplo
+    document.getElementById('example-btn')?.addEventListener('click', loadExample);
+  });
+</script>
