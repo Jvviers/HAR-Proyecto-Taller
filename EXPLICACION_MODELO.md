@@ -59,7 +59,15 @@ Detectan impactos fuertes o movimientos bruscos en una dirección.
     *   Al saltar y caer, hay un impacto seco. El **Máximo** del acelerómetro vertical se disparará momentáneamente a valores extremos (ej. **20 m/s²**), aunque el promedio sea normal.
     *   *El modelo piensa:* "Promedio normal pero Máximo explosivo = Saltos".
 
-### 4. Energía (FFT): "El Ritmo del Movimiento"
+62: ### 4. Skewness (Asimetría): "El Detector de Impactos"
+Mide si el movimiento es "equilibrado" (simétrico) o si tiene "golpes" hacia un solo lado.
+
+*   **Ejemplo (Simetría vs Impacto):**
+    *   **Caminar (Simétrico):** Tu brazo va adelante y atrás con la misma fuerza. Es como un péndulo. El Skewness es **cercano a 0**.
+    *   **Subir Escaleras (Asimétrico):** Das un golpe fuerte al pisar el escalón (pico alto) y levantas el pie suavemente. Es como dar un martillazo. El Skewness será **alto (Positivo o Negativo)**.
+    *   *El modelo piensa:* "Si hay golpes secos en una dirección, no es caminar plano".
+
+### 5. Energía (FFT): "El Ritmo del Movimiento"
 Aquí está nuestro ejemplo estrella. La energía se calcula usando la Transformada de Fourier, que mide qué tan "repetitiva" y fuerte es una señal.
 
 #### 💡 El Caso de la Posición #180 (Energía Giroscopio Brazo Y)

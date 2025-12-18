@@ -12,10 +12,10 @@ import SubjectSelector from '../components/SubjectSelector.astro';
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-bold text-white">
-              🏃 HAR Dashboard
+              🏃 Proyecto Taller Integrado 
             </h1>
             <p class="text-slate-400 mt-1">
-              Human Activity Recognition - Modelo ONNX
+              Human Activity Recognition 
             </p>
           </div>
           <div id="status-indicator" class="flex items-center gap-2">
@@ -99,6 +99,8 @@ import SubjectSelector from '../components/SubjectSelector.astro';
           </div>
         </div>
       </section>
+
+
 
       <!-- Matriz de Confusión -->
       <section class="mb-8">
@@ -423,12 +425,15 @@ import SubjectSelector from '../components/SubjectSelector.astro';
     container!.innerHTML = html;
   }
 
+
+
   // --- LOGIC ---
 
   async function loadPredictions(subjectId: number) {
     const grid = document.getElementById('activities-grid');
     grid!.innerHTML = '<div class="col-span-full text-center text-slate-400 py-8">Cargando...</div>';
     document.getElementById('timeline-container')!.innerHTML = '<div class="text-center text-slate-500 py-8">Cargando...</div>';
+
     
     try {
       // Parallel fetch for speed
@@ -445,6 +450,7 @@ import SubjectSelector from '../components/SubjectSelector.astro';
       renderPredictionStats(predData);
       renderTimeline(timeData);
       renderConfusionMatrix(matrixData);
+
       
     } catch (e) {
       console.error('Error cargando predicciones:', e);
@@ -484,6 +490,7 @@ import SubjectSelector from '../components/SubjectSelector.astro';
         renderPredictionStats(data.prediction_stats, `Archivo: ${data.filename}`);
         renderTimeline(data.timeline_data);
         renderConfusionMatrix(data.matrix_data);
+
         
       } else {
         throw new Error(data.error || 'Error al procesar archivo');

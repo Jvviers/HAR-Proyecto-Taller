@@ -244,6 +244,8 @@ def generate_confusion_matrix_data(y_test, y_pred):
         "matrix": cm.tolist()
     }
 
+
+
 # --- ENDPOINTS API ---
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -287,6 +289,7 @@ def predict_subject(subject_id):
     
     stats = generate_prediction_stats(y_test, y_pred, step_duration)
     stats["subject_id"] = subject_id
+
     return jsonify(stats)
 
 @app.route('/api/predict', methods=['POST'])
